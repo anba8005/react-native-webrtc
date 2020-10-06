@@ -2,6 +2,7 @@ package com.oney.WebRTCModule;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
+import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.graphics.Point;
 import androidx.core.view.ViewCompat;
@@ -9,14 +10,23 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.util.Log;
 
+import com.facebook.react.bridge.Arguments;
 import com.facebook.react.bridge.ReactContext;
+import com.facebook.react.bridge.WritableMap;
+import com.facebook.react.uimanager.events.RCTEventEmitter;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.webrtc.EglBase;
+import org.webrtc.EglRenderer;
 import org.webrtc.MediaStream;
 import org.webrtc.RendererCommon;
 import org.webrtc.RendererCommon.RendererEvents;
@@ -24,7 +34,7 @@ import org.webrtc.RendererCommon.ScalingType;
 import org.webrtc.SurfaceViewRenderer;
 import org.webrtc.VideoTrack;
 
-public class WebRTCView extends ViewGroup {
+public class WebRTCView extends ViewGroup implements EglRenderer.FrameListener {
     /**
      * The scaling type to be utilized by default.
      *
@@ -94,6 +104,58 @@ public class WebRTCView extends ViewGroup {
      * {@link #frameRotation}, {@link #frameWidth}, and {@link #scalingType}.
      */
     private final Object layoutSyncRoot = new Object();
+
+	    /**
+     * Total number of video frames rendered by
+     * {@link #surfaceViewRenderer}.
+     */
+    private AtomicInteger totalFramesRendered = new AtomicInteger();
+
+    private static final ScheduledThreadPoolExecutor statsExecutor = 
+		(ScheduledThreadPoolExecutor) Executors.newScheduledThreadPool(4);
+
+    private volatile int statsReportingPeriod;
+
+    public void setStatsPeriod(int statsPeriod) {
+        statsReportingPeriod = statsPeriod;
+    }
+
+    @Override
+    public void onFrame(Bitmap bitmap) {
+        totalFramesRendered.incrementAndGet();
+        surfaceViewRenderer.addFrameListener(this, 0);
+    }
+
+    private final Runnable statsReportRunnable = () -> {
+        WritableMap event = Arguments.createMap();
+        int framesRendered = totalFramesRendered.get();
+        event.putInt("totalFramesRendered", framesRendered);
+        synchronized (layoutSyncRoot) {
+            event.putInt("frameWidth", frameWidth);
+            event.putInt("frameHeight", frameHeight);
+        }
+        Log.d(TAG, "Total frames rendered " + framesRendered);
+        ReactContext reactContext = (ReactContext) getContext();
+        reactContext.getJSModule(RCTEventEmitter.class).receiveEvent(getId(), "onStats", event);
+    };
+
+    private ScheduledFuture statsReportingTask;
+
+    private void startStatsReporting() {
+        if (statsReportingPeriod > 0) {
+            Log.d(TAG, "Start stats reporting");
+            statsReportingTask = statsExecutor.scheduleAtFixedRate(statsReportRunnable, statsReportingPeriod,
+                    statsReportingPeriod, TimeUnit.MILLISECONDS);
+        }
+    }
+
+    private void stopStatsReporting() {
+        if (statsReportingTask != null) {
+            Log.d(TAG, "Stop stats reporting.");
+            statsReportingTask.cancel(false);
+            statsReportingTask = null;
+        }
+    }
 
     /**
      * The indicator which determines whether this {@code WebRTCView} is to
@@ -603,6 +665,8 @@ public class WebRTCView extends ViewGroup {
             }
 
             surfaceViewRenderer.init(sharedContext, rendererEvents);
+			surfaceViewRenderer.addFrameListener(this, 0);
+            startStatsReporting();
 
             try {
                 videoTrack.addSink(surfaceViewRenderer);
