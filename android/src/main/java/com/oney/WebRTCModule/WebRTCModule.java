@@ -6,6 +6,7 @@ import android.util.SparseArray;
 
 import com.facebook.react.bridge.Arguments;
 import com.facebook.react.bridge.Callback;
+import com.facebook.react.bridge.Promise;
 import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.ReactContextBaseJavaModule;
 import com.facebook.react.bridge.ReactMethod;
@@ -34,10 +35,6 @@ public class WebRTCModule extends ReactContextBaseJavaModule {
     private final SparseArray<PeerConnectionObserver> mPeerConnectionObservers;
     final Map<String, MediaStream> localStreams;
 
-    /**
-     * The implementation of {@code getUserMedia} extracted into a separate file
-     * in order to reduce complexity and to (somewhat) separate concerns.
-     */
     private GetUserMediaImpl getUserMediaImpl;
 
     public static class Options {
@@ -482,6 +479,11 @@ public class WebRTCModule extends ReactContextBaseJavaModule {
     }
 
     @ReactMethod
+    public void getDisplayMedia(Promise promise) {
+        ThreadUtils.runOnExecutor(() -> getUserMediaImpl.getDisplayMedia(promise));
+    }
+
+    @ReactMethod
     public void getUserMedia(ReadableMap constraints,
                              Callback    successCallback,
                              Callback    errorCallback) {
@@ -561,23 +563,6 @@ public class WebRTCModule extends ReactContextBaseJavaModule {
         if (stream == null) {
             Log.d(TAG, "mediaStreamRelease() stream is null");
             return;
-        }
-
-        // Remove and dispose any tracks ourselves before calling stream.dispose().
-        // We need to remove the extra objects (TrackPrivate) we create.
-
-        List<AudioTrack> audioTracks = new ArrayList<>(stream.audioTracks);
-        for (AudioTrack track : audioTracks) {
-            track.setEnabled(false);
-            stream.removeTrack(track);
-            getUserMediaImpl.disposeTrack(track.id());
-        }
-
-        List<VideoTrack> videoTracks = new ArrayList<>(stream.videoTracks);
-        for (VideoTrack track : videoTracks) {
-            track.setEnabled(false);
-            stream.removeTrack(track);
-            getUserMediaImpl.disposeTrack(track.id());
         }
 
         localStreams.remove(id);
