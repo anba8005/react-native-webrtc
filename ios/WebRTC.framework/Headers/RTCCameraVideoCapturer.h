@@ -17,10 +17,10 @@
 NS_ASSUME_NONNULL_BEGIN
 
 RTC_OBJC_EXPORT
-// Camera capture that implements RTCVideoCapturer. Delivers frames to a
-// RTCVideoCapturerDelegate (usually RTCVideoSource).
+// Camera capture that implements RTCVideoCapturer. Delivers frames to a RTCVideoCapturerDelegate
+// (usually RTCVideoSource).
 NS_EXTENSION_UNAVAILABLE_IOS("Camera not available in app extensions.")
-@interface RTC_OBJC_TYPE (RTCCameraVideoCapturer) : RTC_OBJC_TYPE(RTCVideoCapturer)
+@interface RTCCameraVideoCapturer : RTCVideoCapturer
 
 // Capture session that is used for capturing. Valid from initialization to dealloc.
 @property(readonly, nonatomic) AVCaptureSession *captureSession;
@@ -50,6 +50,11 @@ NS_EXTENSION_UNAVAILABLE_IOS("Camera not available in app extensions.")
                            fps:(NSInteger)fps;
 // Stops the capture session asynchronously.
 - (void)stopCapture;
+
+// Locks landscape => 0 - no lock 1 - lanscape 2 - landscape left 3 - landscape right
+#if TARGET_OS_IPHONE
+- (void)setLockLandscape:(NSInteger)lockLandscape;
+#endif
 
 @end
 

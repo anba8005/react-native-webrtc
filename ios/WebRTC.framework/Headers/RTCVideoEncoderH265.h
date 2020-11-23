@@ -11,15 +11,13 @@
 #import <Foundation/Foundation.h>
 
 #import "RTCMacros.h"
-#import "RTCVideoDecoder.h"
+#import "RTCVideoCodecInfo.h"
+#import "RTCVideoEncoder.h"
 
 RTC_OBJC_EXPORT
-@interface RTCVideoDecoderVP8 : NSObject
+API_AVAILABLE(ios(11.0))
+@interface RTCVideoEncoderH265 : NSObject <RTCVideoEncoder>
 
-/* This returns a VP8 decoder that can be returned from a RTCVideoDecoderFactory injected into
- * RTCPeerConnectionFactory. Even though it implements the RTCVideoDecoder protocol, it can not be
- * used independently from the RTCPeerConnectionFactory.
- */
-+ (id<RTCVideoDecoder>)vp8Decoder;
+- (instancetype)initWithCodecInfo:(RTCVideoCodecInfo *)codecInfo;
 
 @end

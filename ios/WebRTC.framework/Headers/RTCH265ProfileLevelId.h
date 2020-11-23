@@ -11,15 +11,6 @@
 #import <Foundation/Foundation.h>
 
 #import "RTCMacros.h"
-#import "RTCVideoDecoder.h"
 
-RTC_OBJC_EXPORT
-@interface RTCVideoDecoderVP8 : NSObject
-
-/* This returns a VP8 decoder that can be returned from a RTCVideoDecoderFactory injected into
- * RTCPeerConnectionFactory. Even though it implements the RTCVideoDecoder protocol, it can not be
- * used independently from the RTCPeerConnectionFactory.
- */
-+ (id<RTCVideoDecoder>)vp8Decoder;
-
-@end
+RTC_OBJC_EXPORT extern NSString *const kRTCVideoCodecH265Name;
+RTC_OBJC_EXPORT extern NSString *const kRTCLevel31Main;
