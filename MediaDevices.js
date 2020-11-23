@@ -16,6 +16,13 @@ class MediaDevices extends EventTarget(MEDIA_DEVICES_EVENTS) {
     // TODO: implement.
     ondevicechange: ?Function;
 
+	iosLandscapeLock;
+
+    // Locks landscape on IOS => 0 - no lock 1 - landscape 2 - landscape left 3 - landscape right
+    setIOSLandscapeLock(lock) {
+		this.iosLandscapeLock = lock;
+    }
+
     /**
      * W3C "Media Capture and Streams" compatible {@code enumerateDevices}
      * implementation.
@@ -32,7 +39,7 @@ class MediaDevices extends EventTarget(MEDIA_DEVICES_EVENTS) {
      * @returns {Promise}
      */
     getDisplayMedia(constraints) {
-        return getDisplayMedia(constraints);
+        return getDisplayMedia(constraints,this.iosLandscapeLock);
     }
 
     /**
